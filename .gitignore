@@ -1,1 +1,8 @@
-predictions/
+predictions/VAE/images/
+predictions/KLD_Anneal_40000_steps-10-Beta-VAE/images/
+predictions/10000-Beta-VAE/images/
+predictions/10-Beta-VAE/images/
+predictions/100-Beta-VAE/images/
+predictions/1000-Beta-VAE/images/
+predictions/KLD_Decrease_40000_steps-100to1-Beta-VAE/images/
+predictions/KLD_Decrease_100000_steps-10000to1-Beta-VAE/images/
