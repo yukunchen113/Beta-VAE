@@ -12,16 +12,16 @@ The model training is contained in main.py, the parameters are in params.py and 
 
 ## β-VAE background
 ### Resources
-These are resources for VAEs and \beta-VAE:
+These are resources for VAEs and β-VAE:
 - VAE Original Paper: [Auto-Encoding Variational Bayes](https://arxiv.org/abs/1312.6114)
 - VAE Explanation: [Tutorial on Variational Autoencoders](https://arxiv.org/abs/1606.05908)
 - β-VAE Original Paper: [β-VAE](https://openreview.net/pdf?id=Sy2fzU9gl)
 - Understanding disentangling in β-VAE: [Understanding disentangling in β-VAE](https://arxiv.org/pdf/1804.03599.pdf)
 
-### From VAE to \beta-VAE
-In terms of architecture, \beta-VAE is the same as the VAE. The change is in the loss function. the \beta term is a multiplier on the KLD term. 
+### From VAE to β-VAE
+In terms of architecture, β-VAE is the same as the VAE. The change is in the loss function. the β term is a multiplier on the KLD term. 
 
-Recall how each latent representation given a training sample is a probability distribution. An increase in the \beta term will cause the probabilites to become more like a zero-centered isotropic normal. The standard deviations will become closer to 1, and the means will be closer to 0. The natural form that the loss without the KLD term will want to take will be, dirac deltas that are spread out (have a large range of means and close to 0 standard deviation). This is to prevent the learned representation of each image from affecting each other as much as possible. Increasing the \beta term will squish the distributions, and will widen each distribution. Forcing there to be significant representations inbetween points. This is the VAE objective.
+Recall how each latent representation given a training sample is a probability distribution. An increase in the β term will cause the probabilites to become more like a zero-centered isotropic normal. The standard deviations will become closer to 1, and the means will be closer to 0. The natural form that the loss without the KLD term will want to take will be, dirac deltas that are spread out (have a large range of means and close to 0 standard deviation). This is to prevent the learned representation of each image from affecting each other as much as possible. Increasing the β term will squish the distributions, and will widen each distribution. Forcing there to be significant representations inbetween points. This is the VAE objective.
 
 ### Theory
 
