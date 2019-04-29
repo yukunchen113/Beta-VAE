@@ -63,12 +63,26 @@ To do analysis of disentanglement, we should decide which element in the latent 
 
 Here I used a zero vector with the ith element as a value from range -3 to 3, where i is the element with the highest absolute mean. Keep in mind that this might be a source of error, as the space of the training latents is shrinked as the β term is increased. This means that the range is not relative to the range of training samples.
 
-![β = 10000, KLD is too large, causing posterior collapse](images/latent_traversal/10000-Beta-VAE.jpg)
-![β = 1000, KLD is too large, causing posterior collapse](images/latent_traversal/1000-Beta-VAE.jpg)
-![β = 100, seems to be traversing background colour and shading, it counts hair colour as part of background](images/latent_traversal/100-Beta-VAE.jpg)
-![β = 10, seems to be traversing background colour and gender](images/latent_traversal/10-Beta-VAE.jpg)
-![KLD β decreasing to 0 from 100 in 40000 steps, here the face structure is changing, specifically the jaw and forehead](images/latent_traversal/KLD_Decrease_40000_steps-100to1-Beta-VAE.jpg)
-![KLD β annealing to 10 with 40000 steps, The background colour and shading is changing](images/latent_traversal/KLD_Anneal_40000_steps-10-Beta-VAE.jpg)
-![KLD decreasing to 0 from 10000 in 100000 steps, The hair colour and azimuth is changing as well.](images/latent_traversal/KLD_Decrease_100000_steps-10000to1-Beta-VAE.jpg)
-![regular VAE, the gender, smile, and azimuth is changing here.](images/latent_traversal/VAE.jpg)
+β = 10000, KLD is too large, causing posterior collapse
+![β = 10000](images/latent_traversal/10000-Beta-VAE.jpg)
 
+β = 1000, KLD is too large, causing posterior collapse
+![β = 1000](images/latent_traversal/1000-Beta-VAE.jpg)
+
+β = 100, seems to be traversing background colour and shading, it counts hair colour as part of background
+![β = 100](images/latent_traversal/100-Beta-VAE.jpg)
+
+β = 10, seems to be traversing background colour and gender
+![β = 10](images/latent_traversal/10-Beta-VAE.jpg)
+
+KLD β decreasing to 0 from 100 in 40000 steps, here the face structure is changing, specifically the jaw and forehead
+![KLD β decreasing to 0 from 100 in 40000 steps](images/latent_traversal/KLD_Decrease_40000_steps-100to1-Beta-VAE.jpg)
+
+KLD β annealing to 10 with 40000 steps, The background colour and shading is changing
+![KLD β annealing to 10 with 40000 steps](images/latent_traversal/KLD_Anneal_40000_steps-10-Beta-VAE.jpg)
+
+KLD decreasing to 0 from 10000 in 100000 steps, The hair colour and azimuth is changing as well.
+![KLD decreasing to 0 from 10000 in 100000 steps](images/latent_traversal/KLD_Decrease_100000_steps-10000to1-Beta-VAE.jpg)
+
+regular VAE, the gender, smile, and azimuth is changing here.
+![regular VAE, the gender](images/latent_traversal/VAE.jpg)
