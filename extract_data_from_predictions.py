@@ -9,10 +9,15 @@ folders = os.listdir(main_path)
 for model_path in folders:
 	folders_path = os.path.join(main_path, model_path)
 	images_path = os.path.join(folders_path, "images/")
+	if not os.path.exists(images_path):
+		continue
 
 	log_file = os.path.join(folders_path, "log.txt")
-	with open(".gitignore", "a") as f:
-		f.write(images_path+"\n")
+	with open(".gitignore") as f:
+		current_path = images_path+"\n"
+		all_lines = f.readlines()
+		if not current_path in all_lines:
+			f.write(current_path)
 	graph_path = os.path.join(dest_path, "%s_graphs.jpg"%model_path)
 	gif_path = os.path.join(dest_path, "%s.gif"%model_path)
 	create_log_graphs(log_file, graph_path)

@@ -35,7 +35,8 @@ training_params = {
 
 general_params = {
 	#for image preprocessing
-	"imreshape_size": [64, 64]  # this is the shape of the image to be resized to
+	"imreshape_size": [64, 64],  # this is the shape of the image to be resized to
+	"data_shape": [None, 218, 178, 3], #this is the shape of the images
 }
 
 model_params = {

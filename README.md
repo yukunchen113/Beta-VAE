@@ -3,7 +3,9 @@
 ## About this Project
 This project implements the β-VAE. β is a term which controls disentanglement within latent representations.
 
-Please see my project on implementing a [VAE](https://github.com/yukunchen113/VariationalAutoEncoder) for more on VAE latent space analysis. 
+Please see my project on implementing a [VAE](https://github.com/yukunchen113/VariationalAutoEncoder) for more on VAE latent space analysis.
+
+Model checkpoints, parameters files and run files are saved in the predictions folder. See _Analysis_ section below for more on each run. The model files are called model.ckpt
 
 ## Requirements
 Please pull my utils repo, and add it to your python path. The functions there are used.
@@ -44,4 +46,29 @@ Something interesting about disentanglement is it's relationship with domain ran
 TBD
 
 ## Analysis:
-TBD
+
+See the images/Training Results folder for various results ran by different training methods. These results are in the same format as the results from my VAE project. For this project, I aim to explore the new things that disentanglement brings to the table.
+
+Here are the tests that were run:
+- regular VAE: VAE
+- β set to 10: 10-Beta-VAE
+- β set to 100: 100-Beta-VAE
+- β set to 1000: 1000-Beta-VAE
+- β set to 10000: 10000-Beta-VAE
+- KLD β annealing to 10 with 40000 steps: KLD_Anneal_40000_steps-10-Beta-VAE
+- KLD β decreasing to 0 from 100 in 40000 steps: KLD_Decrease_40000_steps-100to1-Beta-VAE
+- KLD decreasing to 0 from 10000 in 100000 steps: KLD_Decrease_100000_steps-10000to1-Beta-VAE
+
+To do analysis of disentanglement, we should decide which element in the latent representation to vary. Lets try the most distinct feature first. Under heavy regularizations, the model will try to optimize for the feature that affects the loss the most. We can try to get the average distribution per element that is the furthest from a zero-centered isotropic normal distribution, specifically, the mean should be the farthest from zero. Lets try to see what happens when varying this element.
+
+Here I used a zero vector with the ith element as a value from range -3 to 3, where i is the element with the highest absolute mean. Keep in mind that this might be a source of error, as the space of the training latents is shrinked as the β term is increased. This means that the range is not relative to the range of training samples.
+
+![β = 10000, KLD is too large, causing posterior collapse](images/latent_traversal/10000-Beta-VAE.jpg)
+![β = 1000, KLD is too large, causing posterior collapse](images/latent_traversal/1000-Beta-VAE.jpg)
+![β = 100, seems to be traversing background colour and shading, it counts hair colour as part of background](images/latent_traversal/100-Beta-VAE.jpg)
+![β = 10, seems to be traversing background colour and gender](images/latent_traversal/10-Beta-VAE.jpg)
+![KLD β decreasing to 0 from 100 in 40000 steps, here the face structure is changing, specifically the jaw and forehead](images/latent_traversal/KLD_Decrease_40000_steps-100to1-Beta-VAE.jpg)
+![KLD β annealing to 10 with 40000 steps, The background colour and shading is changing](images/latent_traversal/KLD_Anneal_40000_steps-10-Beta-VAE.jpg)
+![KLD decreasing to 0 from 10000 in 100000 steps, The hair colour and azimuth is changing as well.](images/latent_traversal/KLD_Decrease_100000_steps-10000to1-Beta-VAE.jpg)
+![regular VAE, the gender, smile, and azimuth is changing here.](images/latent_traversal/VAE.jpg)
+

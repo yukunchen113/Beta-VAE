@@ -13,8 +13,9 @@ from PIL import Image
 from PIL import ImageDraw
 import model as md
 from PIL import ImageFont
+np.set_printoptions(suppress=True)
 
-def main(**kwargs):
+def main(is_train=False, **kwargs):
 	tf.reset_default_graph()
 	params = pm.general_params
 	batch_size = params["batch_size"]
@@ -27,45 +28,74 @@ def main(**kwargs):
 	initializer_step = params["initializer_step"]
 	imreshape_size = params["imreshape_size"]
 	validation_tolerence = params["validation_tolerence"]
-	
+	data_shape = params["data_shape"]
+	if not is_train:
+		#when testing, the following keyword arguments must be specified.
+		assert "test_images" in kwargs or "test_latents" in kwargs, "must specify a latent space or test images for reconstruction"
+		assert "modelsavedir" in kwargs, "must specify path for saved models"
+		if "test_images" in kwargs:
+			test_images = kwargs["test_images"]
+			if test_images.ndim < 4:
+				test_images = np.expand_dims(test_images, 0)
+		else:
+			test_images = None
+
+		if "test_latents" in kwargs:
+			test_latents = np.asarray(kwargs["test_latents"])
+			if test_latents.ndim < 2:
+				test_latents = np.expand_dims(test_latents, 0)
+		else:
+			test_latents = None
+		for i in kwargs["modelsavedir"]:
+			assert "checkpoint" in os.listdir(i), "no saved model in one of the specified directories:%s"%i
+		modelsavedir = [os.path.join(i, "model.ckpt") for i in kwargs["modelsavedir"]]
+
 	if "max_steps" in kwargs:
 		num_steps = kwargs["max_steps"]
 
-	if "save_folder" in kwargs:
-		pm.create_new_path(pm.logdir, False)
-		logdir = os.path.join(pm.logdir, kwargs["save_folder"])
-	else:
-		logdir = pm.logdir
-	pm.create_new_path(logdir)
+	if is_train:
+		# if specified, create general path (if doesn't exist) 
+		# Then, define model save path
+		if "save_folder" in kwargs:
+			pm.create_new_path(pm.logdir, False)
+			logdir = os.path.join(pm.logdir, kwargs["save_folder"])
+		else:
+			logdir = pm.logdir
 
-	imgdir = os.path.join(logdir, "images")
-	pm.create_new_path(imgdir)
+		# delete previous model path if training.
+		pm.create_new_path(logdir, is_train)
 
-	modelsavedir = os.path.join(logdir, "model_save_point")
-	pm.create_new_path(modelsavedir, False)
+		imgdir = os.path.join(logdir, "images")
 
-	log_file = os.path.join(logdir, "log.txt")
-	if os.path.exists(log_file):
-		os.remove(log_file)
+		# delete previous image path if training.
+		pm.create_new_path(imgdir, is_train)
 
-	# copy parameters to predictions.
-	for file_to_be_copied in ["params.py", "model.py", "main.py"]:
-		shutil.copyfile(file_to_be_copied, os.path.join(logdir, file_to_be_copied))
+		modelsavedir = os.path.join(logdir, "model_save_point")
+		pm.create_new_path(modelsavedir, False)
+
+		log_file = os.path.join(logdir, "log.txt")
+		if os.path.exists(log_file) and is_train:
+			os.remove(log_file)
+
+		# copy parameters to predictions.
+		for file_to_be_copied in ["params.py", "model.py", "main.py"]:
+			shutil.copyfile(file_to_be_copied, os.path.join(logdir, file_to_be_copied))
 
 	# get data
-	dataset, get_group = gu.get_celeba_data(gc.datapath)#, preprocess_fn = lambda x: np.array(Image.fromarray(x).resize((x.shape[0], *imreshape_size, x.shape[-1]))))
-	test_images, test_labels = get_group(group_num=initializer_step//1000, random_selection=False, remove_past=True)  # get images, and remove from get_group iterator
-	validation_images, validation_labels = get_group(group_num=1, random_selection=False, remove_past=True)  # get images, and remove from get_group iterator
+	if is_train:
+		dataset, get_group = gu.get_celeba_data(gc.datapath)#, preprocess_fn = lambda x: np.array(Image.fromarray(x).resize((x.shape[0], *imreshape_size, x.shape[-1]))))
+		test_images, test_labels = get_group(group_num=initializer_step//1000, random_selection=False, remove_past=True)  # get images, and remove from get_group iterator
+		validation_images, validation_labels = get_group(group_num=1, random_selection=False, remove_past=True)  # get images, and remove from get_group iterator
 
-	data_shape = list(test_images.shape)
+	data_shape = data_shape if test_images is None else list(test_images.shape)
 	data_shape[0] = batch_size
 
 	# create placeholders
 	inputs_ph = tf.placeholder(tf.float32, shape=(None, *data_shape[1:]), name="inputs_ph")  # these are the ones fed into the network, after been batched.
 	outputs_ph = tf.placeholder(tf.float32, name="outputs_ph")  # these are the ones fed into the network, after been batched.
-	inputs_set_ph = tf.placeholder(tf.float32, name="inputs_set_ph")  # these are the ones fed into the iterator, to be batched.
-	outputs_set_ph = tf.placeholder(tf.float32, name="outputs_set_ph")  # these are the ones fed into the iterator, to be batched.
-	iterator, next_element = gu.get_iterator(batch_size, inputs=inputs_set_ph, labels=outputs_set_ph)  # this is the iterator.
+	#inputs_set_ph = tf.placeholder(tf.float32, name="inputs_set_ph")  # these are the ones fed into the iterator, to be batched.
+	#outputs_set_ph = tf.placeholder(tf.float32, name="outputs_set_ph")  # these are the ones fed into the iterator, to be batched.
+	#iterator, next_element = gu.get_iterator(batch_size, inputs=inputs_set_ph, labels=outputs_set_ph)  # this is the iterator.
 
 	# preprocessing
 	inputs = inputs_ph
@@ -100,28 +130,40 @@ def main(**kwargs):
 	saver = tf.train.Saver()
 
 	# latent space analysis:
+	
+	# min, max means and standard deviations across the 
 	std_analysis = [tf.reduce_mean(tf.exp(0.5*dist_params[1])), tf.reduce_min(tf.exp(0.5*dist_params[1])), tf.reduce_max(tf.exp(0.5*dist_params[1]))]
 	mean_analysis = [tf.reduce_mean(dist_params[0]), tf.reduce_min(dist_params[0]), tf.reduce_max(dist_params[0])]
 
-
+	latent_element_std_analysis = tf.reduce_mean(tf.exp(0.5*dist_params[1]), axis=0)
+	latent_element_mean_analysis = tf.reduce_mean(dist_params[0], axis=0)
+	latent_element_kld_analysis = tf.reduce_mean(vae.kl_isonormal_loss(False), axis=0)
 	# run model
-	with tf.Session() as sess:
+	with tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.8))) as sess:
 		# print(training_data["data"].shape)
 		sess.run(tf.global_variables_initializer())
-		test_images = test_images[:batch_size]
+		if is_train:
+			test_images = test_images[:batch_size]
 
+			validation_feed_dict = {  # keep all these images to test constant.
+				inputs_ph: validation_images,
+				outputs_ph: validation_labels,
+			}
+			prev_validation_loss = None
+			current_validation_count = 0
+		else:
+			num_steps = len(modelsavedir)
+			return_dict = {}
 		first_step = True
-		validation_feed_dict = {  # keep all these images to test constant.
-			inputs_ph: validation_images,
-			outputs_ph: validation_labels,
-		}
-		prev_validation_loss = None
-		current_validation_count = 0
-		with open(log_file, "a") as log_file:
-			for step in range(num_steps):
+		if is_train:
+			log_file = open(log_file, "a")
+		for step in range(num_steps):
+			if not is_train:
+				saver.restore(sess, modelsavedir[step])
+			if is_train:
 				if not step%(initializer_step//batch_size):
 					#get images and labels
-					images, labels = get_group(group_num=initializer_step//1000, random_selection=False)
+					images, labels = get_group(group_num=initializer_step//1000, random_selection=True)
 					images = images[:images.shape[0]//batch_size*batch_size] #cut to batch_size
 					labels = labels[:labels.shape[0]//batch_size*batch_size]
 					images, labels = gu.shuffle_arrays(images, labels)
@@ -169,35 +211,75 @@ def main(**kwargs):
 							break
 
 
-				if not step%plot_step or step in log_step:
-					if first_step:
-						test_feed_dict = {  # keep all these images to test constant.
-							inputs_ph: test_images,
-							outputs_ph: test_labels[:batch_size],
-						}
-						first_step = False
+			if is_train and (not step%plot_step or step in log_step):
+				if first_step:
+					test_feed_dict = {  # keep all these images to test constant.
+						inputs_ph: test_images,
+						outputs_ph: test_labels[:batch_size],
+					}
+					first_step = False
 
-					#create grid of interpolations between faces:
-					grid_size = [12,4]
-					latent_space_generation = sess.run(vae.latent_output, feed_dict=test_feed_dict)[:3]
-					v1 = (latent_space_generation[1] - latent_space_generation[0])/(grid_size[0]-1)
-					v2 = (latent_space_generation[2] - latent_space_generation[0])/(grid_size[1]-1)
-					axis1 = np.arange(grid_size[0]).reshape(-1,1,1)*v1
-					axis2 = np.arange(grid_size[1]).reshape(1,-1,1)*v2
-					generation_latent_space = axis1+axis2+latent_space_generation[0]
-					generation_latent_space = generation_latent_space.reshape(-1,latent_size)
-					test_feed_dict[latents_ph] = generation_latent_space
+				#create grid of interpolations between faces:
+				grid_size = [6,8]
+				latent_space_generation = sess.run(vae.latent_output, feed_dict=test_feed_dict)[:3]
+				v1 = (latent_space_generation[1] - latent_space_generation[0])/(grid_size[0]-1)
+				v2 = (latent_space_generation[2] - latent_space_generation[0])/(grid_size[1]-1)
+				axis1 = np.arange(grid_size[0]).reshape(-1,1,1)*v1
+				axis2 = np.arange(grid_size[1]).reshape(1,-1,1)*v2
+				generation_latent_space = axis1+axis2+latent_space_generation[0]
+				generation_latent_space = generation_latent_space.reshape(-1,latent_size)
+				test_feed_dict[latents_ph] = generation_latent_space
 
-					
-					#save image of data:
-					#create reconstruction
-					orig_images_val, recon_val, gener_val = sess.run([inputs, reconstruction_prediction, generation_prediction], feed_dict=test_feed_dict)
-					
-					#print("MIN, MAX", np.amin(recon_val), np.amax(recon_val))
-					create_images(step, orig_images_val[:48], recon_val[:48], gener_val[:48], imgdir, params["postprocess_outputs"])
+				
+				#save image of data:
+				#create reconstruction
+				orig_images_val, recon_val, gener_val = sess.run([inputs, reconstruction_prediction, generation_prediction], feed_dict=test_feed_dict)
+				
+				#print("MIN, MAX", np.amin(recon_val), np.amax(recon_val))
+				save_image_results = True
+				if "save_image_results" in kwargs:
+					save_image_results = kwargs["save_image_results"]
+				create_images(step, imgdir, params["postprocess_outputs"], orig_images_val[:48], recon_val[:48], gener_val[:48])
+			
+			if not is_train:
+				test_feed_dict = {}
+				create_images_kwargs = {}
+				if not test_images is None:
+					test_feed_dict[inputs_ph] = test_images
+					orig_images_val, recon_val = sess.run([inputs, reconstruction_prediction], feed_dict=test_feed_dict)
+					create_images_kwargs["original_images"] = orig_images_val[:48]
+					create_images_kwargs["reconstruction"] = recon_val[:48]
+					latent_analysis = sess.run([latent_element_mean_analysis, latent_element_std_analysis, latent_element_kld_analysis], feed_dict=test_feed_dict)
+					#print()
+					#print(modelsavedir[step].split("/")[1])
+					return_dict[modelsavedir[step]] = latent_analysis
+					#latent_analysis = np.transpose(latent_analysis)
+					#for i in range(len(latent_analysis)):
+					#	print("Latent element %d: mean, std, kld\t"%i, latent_analysis[i])
+
+				if not test_latents is None:
+					test_feed_dict[latents_ph] = test_latents
+					gener_val = sess.run(generation_prediction, feed_dict=test_feed_dict)
+					create_images_kwargs["generation"] = gener_val[:48]
+				save_image_results = True
+				if "save_image_results" in kwargs:
+					save_image_results = kwargs["save_image_results"]
+				save_images_aspect_ratio = None
+				if "save_images_aspect_ratio" in kwargs:
+					save_images_aspect_ratio = kwargs["save_images_aspect_ratio"]
+
+				if not ("return_images" in kwargs and kwargs["return_images"]):
+					create_images(step, imgdir=save_image_results, postprocess_outputs=params["postprocess_outputs"], save_images_aspect_ratio=save_images_aspect_ratio, **create_images_kwargs)
+				else:
+					pass
 
 
-def create_images(step, original_images, reconstruction, generation, imgdir, postprocess_outputs):
+		if is_train:
+			log_file.close()
+		else:
+			return return_dict
+
+def create_images(step, imgdir, postprocess_outputs, save_images_aspect_ratio=None, original_images=None, reconstruction=None, generation=None):
 	"""
 	Creates 3 sets of images for VAE, reconstruction, generation, and original
 	:param step: This is the current step of training. This will also be part of the name for the file.
@@ -206,13 +288,18 @@ def create_images(step, original_images, reconstruction, generation, imgdir, pos
 	:param generation: This is the generated images,
 	:return: None
 	"""
-	original_images = gu.create_image_grid(original_images, [1, 9])
-	reconstruction = gu.create_image_grid(reconstruction, [1, 9])
-	generation = gu.create_image_grid(generation, [1, 9])
-
+	images_type = []
+	possible_captions = ["reconstruction original images", "image reconstruction", "image generation"]
+	captions = []
+	j = 0
+	for i in [original_images, reconstruction, generation]:
+		if not i is None:
+			height, width = gu.find_largest_factors(len(i))
+			aspect_ratio = save_images_aspect_ratio if not save_images_aspect_ratio is None else [height, width]
+			images_type.append(gu.create_image_grid(i, aspect_ratio))
+			captions.append(possible_captions[j])
+		j+=1
 	# create images
-	captions = ["reconstruction original images", "image reconstruction", "image generation"]
-	images_type = [original_images, reconstruction, generation]
 	im = []
 	header_size = 30  # amount of space for caption
 	for i in range(len(images_type)):
@@ -223,6 +310,7 @@ def create_images(step, original_images, reconstruction, generation, imgdir, pos
 		caption = captions[i]
 		container = np.squeeze(np.ones((image_type.shape[0]+header_size, *image_type.shape[1:])))
 		container[:-header_size] = image_type
+		#print(np.uint8(postprocess_outputs(container)).dtype)
 		im.append(Image.fromarray(np.uint8(postprocess_outputs(container))))
 		#print("MIN, MAX", np.amin(container), np.amax(container))
 		ImageDraw.Draw(im[i]).text((5,image_type.shape[0]+2), caption)
@@ -243,8 +331,13 @@ def create_images(step, original_images, reconstruction, generation, imgdir, pos
 		total_image.paste(image, (margin//2,header+i*image.size[1]))
 
 	ImageDraw.Draw(total_image).text((margin//2+10,5), "Step: %d"%step)
-	total_image.convert('RGB').save(os.path.join(imgdir, "image_%s.jpg"%step))
-
-
+	total_image.convert('RGB')
+	if not imgdir is None:
+		if not ".jpg" in imgdir:
+			imgdir = os.path.join(imgdir, "image_%s.jpg"%step)
+		total_image.save(imgdir)
+	else:
+		total_image.show()
+		input()
 if __name__ == "__main__":
 	main()

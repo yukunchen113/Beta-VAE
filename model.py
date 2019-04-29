@@ -144,8 +144,10 @@ class VariationalAutoEncoder():
 
 		return pred
 
-	def kl_isonormal_loss(self):
+	def kl_isonormal_loss(self, reduce_sum = True):
 		loss = gu.kl_divergence(self._latent_mean, self._latent_log_variance)
+		if reduce_sum:
+			loss = tf.reduce_sum(loss, axis=1)
 		return loss
 
 	def reconstruction_loss(self, inputs):
