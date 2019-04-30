@@ -71,3 +71,7 @@ for model, latent_data in return_dict.items():
 	images_path.append(os.path.join("images", "%s.jpg"%model.split("/")[1]))
 print(images_path)
 #"""
+##############################
+### Disentanglement Metric ###
+##############################
+#TBD, this for more space to explore this.
