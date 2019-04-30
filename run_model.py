@@ -135,9 +135,12 @@ def main(is_train=False, **kwargs):
 	std_analysis = [tf.reduce_mean(tf.exp(0.5*dist_params[1])), tf.reduce_min(tf.exp(0.5*dist_params[1])), tf.reduce_max(tf.exp(0.5*dist_params[1]))]
 	mean_analysis = [tf.reduce_mean(dist_params[0]), tf.reduce_min(dist_params[0]), tf.reduce_max(dist_params[0])]
 
-	latent_element_std_analysis = tf.reduce_mean(tf.exp(0.5*dist_params[1]), axis=0)
-	latent_element_mean_analysis = tf.reduce_mean(dist_params[0], axis=0)
-	latent_element_kld_analysis = tf.reduce_mean(vae.kl_isonormal_loss(False), axis=0)
+	latent_element_std_average = tf.reduce_mean(tf.exp(0.5*dist_params[1]), axis=0)
+	latent_element_mean_average = tf.reduce_mean(dist_params[0], axis=0)
+	latent_element_kld_average = tf.reduce_mean(vae.kl_isonormal_loss(False), axis=0)
+	latent_element_max = tf.reduce_max(vae.latent_output, axis=0)
+	latent_element_min = tf.reduce_min(vae.latent_output, axis=0)
+
 	# run model
 	with tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.8))) as sess:
 		# print(training_data["data"].shape)
@@ -249,7 +252,12 @@ def main(is_train=False, **kwargs):
 					orig_images_val, recon_val = sess.run([inputs, reconstruction_prediction], feed_dict=test_feed_dict)
 					create_images_kwargs["original_images"] = orig_images_val[:48]
 					create_images_kwargs["reconstruction"] = recon_val[:48]
-					latent_analysis = sess.run([latent_element_mean_analysis, latent_element_std_analysis, latent_element_kld_analysis], feed_dict=test_feed_dict)
+					latent_analysis = sess.run([
+						latent_element_mean_average, 
+						latent_element_std_average, 
+						latent_element_kld_average,
+						latent_element_max,
+						latent_element_min,], feed_dict=test_feed_dict)
 					#print()
 					#print(modelsavedir[step].split("/")[1])
 					return_dict[modelsavedir[step]] = latent_analysis

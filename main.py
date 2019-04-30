@@ -3,6 +3,11 @@ import general_utils as gu
 import os
 import numpy as np
 import general_constants as gc
+
+###########################
+### Training The Models ###
+###########################
+
 #train with different KLD modifiers
 #regular VAE
 #main(is_train=True, save_folder="VAE", kld_function=lambda **kwargs: 1)
@@ -22,8 +27,11 @@ import general_constants as gc
 #main(is_train=True, save_folder="KLD_Decrease_100000_steps-10000to1-Beta-VAE", kld_function=lambda step,**kwargs: max(1, 10000-step/10), validation_off=True, max_steps = 125000)
 
 
-#"""
-# traversing the latent space:
+"""
+###################################
+### traversing the latent space ###
+###################################
+
 def create_interpolations(latent_space_anchor, latent_direction_1, latent_size, grid_size = 8):
 	#create grid of interpolations between faces:
 	v1 = (latent_direction_1 - latent_space_anchor)/(grid_size-1)
@@ -43,15 +51,15 @@ modelsavedir = [os.path.join(logdir, i, "model_save_point") for i in os.listdir(
 return_dict = main(is_train=False, test_images=test_images, modelsavedir=modelsavedir, save_image_results=None, return_images=True)
 images_path = []
 for model, latent_data in return_dict.items():
-	mean, std, kld = latent_data
+	mean, std, kld, maximum, minimum = latent_data
 	print()
 	print(model)
 	mean_sorted = np.argsort(np.abs(mean), axis=0).tolist()
 	#kld_sorted = np.argsort(kld, axis=0).tolist()
 	latent_space_anchor = np.zeros((32))
 	latent_direction_1 = np.zeros((32))
-	latent_space_anchor[mean_sorted[-1]] = -3
-	latent_direction_1[mean_sorted[-1]] = 3
+	latent_space_anchor[mean_sorted[-1]] = maximum[mean_sorted[-1]]
+	latent_direction_1[mean_sorted[-1]] = minimum[mean_sorted[-1]]
 	num_images = 10
 	latents = create_interpolations(latent_space_anchor, latent_direction_1, 32, num_images)
 	latents = np.stack((latents, latents+std, latents+std*2))
