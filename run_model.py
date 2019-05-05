@@ -223,14 +223,14 @@ def main(is_train=False, **kwargs):
 					first_step = False
 
 				#create grid of interpolations between faces:
-				grid_size = [6,8]
-				latent_space_generation = sess.run(vae.latent_output, feed_dict=test_feed_dict)[:3]
+				grid_size = [4, 16]
+				latent_space_generation = sess.run(latent_output, feed_dict=test_feed_dict)[:3]
 				v1 = (latent_space_generation[1] - latent_space_generation[0])/(grid_size[0]-1)
 				v2 = (latent_space_generation[2] - latent_space_generation[0])/(grid_size[1]-1)
 				axis1 = np.arange(grid_size[0]).reshape(-1,1,1)*v1
 				axis2 = np.arange(grid_size[1]).reshape(1,-1,1)*v2
 				generation_latent_space = axis1+axis2+latent_space_generation[0]
-				generation_latent_space = generation_latent_space.reshape(-1,latent_size)
+				generation_latent_space = np.transpose(generation_latent_space, [1,0,2]).reshape(-1,latent_size)
 				test_feed_dict[latents_ph] = generation_latent_space
 
 				
@@ -239,11 +239,17 @@ def main(is_train=False, **kwargs):
 				orig_images_val, recon_val, gener_val = sess.run([inputs, reconstruction_prediction, generation_prediction], feed_dict=test_feed_dict)
 				
 				#print("MIN, MAX", np.amin(recon_val), np.amax(recon_val))
-				save_image_results = True
+				save_image_results = imgdir
 				if "save_image_results" in kwargs:
 					save_image_results = kwargs["save_image_results"]
-				create_images(step, imgdir, params["postprocess_outputs"], orig_images_val[:48], recon_val[:48], gener_val[:48])
-			
+
+				create_images_kwargs = {
+					"original_images":orig_images_val,
+					"reconstruction":recon_val,
+					"generation":gener_val,
+					}
+				create_images(step, imgdir=save_image_results, postprocess_outputs=params["postprocess_outputs"], save_images_aspect_ratio=[1,13], **create_images_kwargs)
+				
 			if not is_train:
 				test_feed_dict = {}
 				create_images_kwargs = {}
