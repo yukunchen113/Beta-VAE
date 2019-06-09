@@ -224,7 +224,7 @@ def main(is_train=False, **kwargs):
 
 				#create grid of interpolations between faces:
 				grid_size = [4, 16]
-				latent_space_generation = sess.run(latent_output, feed_dict=test_feed_dict)[:3]
+				latent_space_generation = sess.run(vae.latent_output, feed_dict=test_feed_dict)[:3]
 				v1 = (latent_space_generation[1] - latent_space_generation[0])/(grid_size[0]-1)
 				v2 = (latent_space_generation[2] - latent_space_generation[0])/(grid_size[1]-1)
 				axis1 = np.arange(grid_size[0]).reshape(-1,1,1)*v1
