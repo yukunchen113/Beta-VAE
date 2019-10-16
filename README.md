@@ -3,7 +3,7 @@
 ## About this Project
 This project implements the β-VAE. β is a term which controls disentanglement within latent representations.
 
-Please see my results on [my article on β-VAEs](https://yukunchen.me/project/2019/06/23/Beta-Variational-Autoencoder.html)
+Please see my results on [my article on β-VAEs](https://yukunchen.me/project/2019/06/09/Beta-Variational-Autoencoder.html)
 
 Please see my project on implementing a [VAE](https://github.com/yukunchen113/VariationalAutoEncoder) for more on VAE latent space analysis.
 
